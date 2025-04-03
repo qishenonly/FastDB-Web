@@ -1,0 +1,72 @@
+@import './variables.scss';
+@import './dark-theme.scss';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: $text-color;
+  background-color: $bg-color;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.card {
+  background: $card-bg;
+  border-radius: $border-radius;
+  box-shadow: $card-shadow;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: $card-shadow-hover;
+    transform: translateY(-2px);
+  }
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: $primary-color;
+}
+
+.subtitle {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: $secondary-color;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: $border-radius;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &-primary {
+    background-color: $primary-color;
+    color: white;
+    border: none;
+    
+    &:hover {
+      background-color: darken($primary-color, 10%);
+    }
+  }
+  
+  &-secondary {
+    background-color: $secondary-color;
+    color: white;
+    border: none;
+    
+    &:hover {
+      background-color: darken($secondary-color, 10%);
+    }
+  }
+} 
