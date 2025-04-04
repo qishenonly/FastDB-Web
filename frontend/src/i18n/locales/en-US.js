@@ -4,7 +4,11 @@ export default {
     admin: 'Admin',
     userCenter: 'User Center',
     settings: 'Settings',
-    logout: 'Logout'
+    logout: 'Logout',
+    notifications: 'Notifications',
+    noNotifications: 'No notifications',
+    markAllAsRead: 'Mark all as read',
+    clearAll: 'Clear all'
   },
   dashboard: {
     title: 'FastDB Dashboard',
@@ -17,7 +21,26 @@ export default {
     recentItems: 'Recently Updated Items',
     viewAll: 'View All',
     view: 'View',
-    dataDetails: 'Data Details'
+    dataDetails: 'Data Details',
+    activityLog: 'Activity Log',
+    noActivity: 'No activity records',
+    addedKey: 'Added key',
+    updatedKey: 'Updated key',
+    deletedKey: 'Deleted key',
+    viewedKey: 'Viewed key',
+    justNow: 'Just now',
+    minutesAgo: '{n} minutes ago',
+    hoursAgo: '{n} hours ago',
+    daysAgo: '{n} days ago',
+    more: 'more',
+    keyLengthDistribution: 'Key Length Distribution',
+    creationTimeDistribution: 'Creation Time Distribution',
+    shortKeys: 'Short Keys (1-5)',
+    mediumKeys: 'Medium Keys (6-15)',
+    longKeys: 'Long Keys (16-30)',
+    veryLongKeys: 'Very Long Keys (30+)',
+    keyLength: 'Key Length',
+    createdItems: 'Created Items'
   },
   database: {
     title: 'Database Management',
@@ -81,6 +104,45 @@ export default {
     connectionError: 'Connection Error',
     closeConnection: 'Close Connection',
     connectionClosed: 'Connection Closed',
-    failedToClose: 'Failed to close connection'
+    failedToClose: 'Failed to close connection',
+    hostRequired: 'Please enter connection address',
+    portRequired: 'Please enter port number',
+    usernameRequired: 'Please enter username',
+    passwordRequired: 'Please enter password',
+    connectionFailed: 'Failed to connect to database',
+    formValidationFailed: 'Form validation failed, please check your input',
+    connectionStatus: 'Connection Status'
+  },
+  sidebar: {
+    navigation: 'Navigation',
+    dashboard: 'Dashboard',
+    dataManagement: 'Data Management',
+    browseDatabases: 'Browse Data',
+    addData: 'Add Data',
+    importExport: 'Import/Export',
+    analysis: 'Data Analysis',
+    settings: 'Settings',
+    help: 'Help',
+    version: 'Version'
+  },
+  notifications: {
+    welcomeTitle: 'Welcome to FastDB',
+    welcomeMessage: 'Welcome to FastDB Database Management System. Enjoy your experience!',
+    connectionSuccessTitle: 'Connection Successful',
+    connectionSuccessMessage: 'Successfully connected to the database server',
+    connectionErrorTitle: 'Connection Failed',
+    connectionErrorMessage: 'Unable to connect to the database server. Please check your connection settings',
+    connectionClosedTitle: 'Connection Closed',
+    connectionClosedMessage: 'Database connection has been safely closed',
+    connectionCloseErrorTitle: 'Close Connection Failed',
+    connectionCloseErrorMessage: 'An error occurred while closing the database connection',
+    dataBackupTitle: 'Data Backed Up',
+    dataBackupMessage: 'All your data has been successfully backed up',
+    dataUpdateTitle: 'Data Updated',
+    dataUpdateMessage: 'Data has been successfully updated',
+    dataDeleteTitle: 'Data Deleted',
+    dataDeleteMessage: 'Data has been successfully deleted',
+    dataAddTitle: 'Data Added',
+    dataAddMessage: 'New data has been successfully added'
   }
 } 

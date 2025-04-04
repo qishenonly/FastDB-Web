@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: 'http://localhost:8010/api',
+  baseURL: '/api', // 修改为相对路径，避免跨域问题
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -79,15 +79,16 @@ export const kvApi = {
   
   // 导入数据
   importData(data) {
-    return api.post('/kv/import', data)
+    return api.post('/v1/kv/import', data)
   },
   
   // 导出数据
   exportData() {
-    return api.get('/kv/export')
+    return api.get('/v1/kv/export')
   }
 }
 
+// 数据库API
 export const dbApi = {
   // 检查数据库连接状态
   checkConnection() {

@@ -1,69 +1,96 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Dashboard from '@/views/Dashboard.vue'
-import Database from '@/views/Database.vue'
-import Settings from '@/views/Settings.vue'
+import store from '@/store'
 
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard',
-    meta: {
-      title: '仪表盘 - FastDB 数据库管理工具'
-    }
+    redirect: '/dashboard'
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: Dashboard,
+    component: () => import('@/views/Dashboard.vue'),
     meta: {
-      title: '仪表盘 - FastDB 数据库管理工具'
+      title: '仪表盘 - FastDB数据管理系统',
+      requiresData: true
     }
   },
   {
+    path: '/database',
+    redirect: '/database/browse'
+  },
+  {
     path: '/database/browse',
-    name: 'DatabaseBrowse',
-    component: Database,
+    name: 'Database',
+    component: () => import('@/views/Database.vue'),
     meta: {
-      title: '数据库 - FastDB 数据库管理工具'
+      title: '数据管理 - FastDB数据管理系统',
+      requiresData: true
     }
   },
   {
     path: '/database/add',
     name: 'DatabaseAdd',
-    component: Database,
+    component: () => import('@/views/Database.vue'),
     meta: {
-      title: '添加数据 - FastDB 数据库管理工具'
+      title: '添加数据 - FastDB数据管理系统',
+      requiresData: true
     },
     props: { showAddForm: true }
   },
   {
-    path: '/database/import',
-    name: 'DatabaseImport',
-    component: Database,
+    path: '/analysis',
+    name: 'Analysis',
+    component: () => import('@/views/Analysis.vue'),
     meta: {
-      title: '导入数据 - FastDB 数据库管理工具'
-    },
-    props: { showImportExport: true }
+      title: '数据分析 - FastDB数据管理系统',
+      requiresData: true
+    }
   },
   {
     path: '/settings',
     name: 'Settings',
+    component: () => import('@/views/Settings.vue'),
     meta: {
-      title: '设置 - FastDB 数据库管理工具'
-    },
-    component: Settings
-  }
+      title: '数据库设置 - FastDB数据管理系统'
+    }
+  },
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(process.env.BASE_URL),
   routes
 })
 
 // 全局前置守卫
-router.beforeEach((to, from, next) => {
-  // 设置标题
-  document.title = to.meta.title || 'FastDB 数据库管理系统'
+router.beforeEach(async (to, from, next) => {
+  // 设置页面标题
+  if (to.meta.title) {
+    document.title = to.meta.title
+  } else {
+    document.title = 'FastDB数据管理系统'
+  }
+  
+  // 如果页面需要数据，检查数据库连接并获取数据
+  if (to.meta.requiresData) {
+    try {
+      // 检查数据库连接状态
+      await store.dispatch('checkDbConnection')
+      
+      // 如果连接成功，获取键值对数据
+      if (store.getters.isDbConnected) {
+        await store.dispatch('fetchKeyValueData')
+      } else {
+        // 如果未连接且不是前往设置页面，可以在这里处理
+        // 注意：实际的重定向逻辑已经在App.vue中通过对话框处理
+        console.warn('数据库未连接，但用户尝试访问需要数据的页面')
+      }
+    } catch (error) {
+      console.error('路由守卫中获取数据失败:', error)
+      // 即使获取数据失败，也允许导航继续
+    }
+  }
+  
   next()
 })
 
