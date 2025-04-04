@@ -106,3 +106,17 @@ test-output/
 **/.sts4-cache/
 **/.apt_generated/
 **/.apt_generated_tests/
+
+# 二进制文件
+/bin/
+/kvdb
+
+# 依赖
+/vendor/
+
+# 数据和日志
+/data/
+/logs/
+
+# 配置文件（可能包含敏感信息）
+/config.local.json

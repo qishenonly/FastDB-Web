@@ -31,35 +31,46 @@
       <template #header>
         <div class="card-header">
           <span>{{ $t('settings.databaseSettings') }}</span>
+          <el-tag v-if="isDbConnected" type="success">{{ $t('settings.connected') }}</el-tag>
+          <el-tag v-else type="danger">{{ $t('settings.disconnected') }}</el-tag>
         </div>
       </template>
       
-      <el-form :model="dbSettings" label-width="120px">
-        <el-form-item :label="$t('settings.connectionAddress')">
-          <el-input v-model="dbSettings.host" placeholder="localhost" style="width: 300px;" />
+      <el-form :model="dbSettings" label-width="120px" :rules="dbRules" ref="dbFormRef">
+        <el-form-item :label="$t('settings.connectionAddress')" prop="host">
+          <el-input v-model="dbSettings.host" />
         </el-form-item>
         
-        <el-form-item :label="$t('settings.port')">
-          <el-input-number v-model="dbSettings.port" :min="1" :max="65535" style="width: 200px;" />
+        <el-form-item :label="$t('settings.port')" prop="port">
+          <el-input-number v-model="dbSettings.port" :min="1" :max="65535" />
         </el-form-item>
         
-        <el-form-item :label="$t('settings.username')">
-          <el-input v-model="dbSettings.username" placeholder="admin" style="width: 300px;" />
+        <el-form-item :label="$t('settings.username')" prop="username">
+          <el-input v-model="dbSettings.username" />
         </el-form-item>
         
-        <el-form-item :label="$t('settings.password')">
-          <el-input v-model="dbSettings.password" type="password" :placeholder="$t('settings.enterPassword')" style="width: 300px;" show-password />
+        <el-form-item :label="$t('settings.password')" prop="password">
+          <el-input v-model="dbSettings.password" type="password" :placeholder="$t('settings.enterPassword')" show-password />
         </el-form-item>
         
-        <el-form-item :label="$t('settings.timeout')">
-          <el-input-number v-model="dbSettings.timeout" :min="1" :max="60" style="width: 200px;" />
+        <el-form-item :label="$t('settings.timeout')" prop="timeout">
+          <el-input-number v-model="dbSettings.timeout" :min="1" :max="60" />
         </el-form-item>
+        
+        <div class="form-actions">
+          <el-button @click="resetSettings" :loading="disconnecting">{{ $t('settings.reset') }}</el-button>
+          <el-button type="primary" @click="saveSettings" :loading="connecting">{{ $t('settings.saveSettings') }}</el-button>
+        </div>
       </el-form>
       
-      <div class="form-actions">
-        <el-button type="primary" @click="saveSettings">{{ $t('settings.saveSettings') }}</el-button>
-        <el-button @click="resetSettings">{{ $t('settings.reset') }}</el-button>
-      </div>
+      <el-alert
+        v-if="connectionError"
+        type="error"
+        :title="$t('settings.connectionError')"
+        :description="connectionError"
+        show-icon
+        style="margin-top: 15px; margin-bottom: 15px; width: 100%;"
+      />
     </el-card>
     
     <el-card class="settings-card">
@@ -82,7 +93,7 @@
 </template>
 
 <script>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, computed } from 'vue'
 import { useStore } from 'vuex'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
@@ -92,6 +103,9 @@ export default {
   setup() {
     const store = useStore()
     const { locale } = useI18n()
+    const dbFormRef = ref(null)
+    const connecting = ref(false)
+    const disconnecting = ref(false)
     
     // 获取当前主题和语言
     const settings = reactive({
@@ -147,15 +161,55 @@ export default {
       ElMessage.success(lang === 'zh-CN' ? '语言已更改' : 'Language changed')
     }
     
-    // 保存设置
+    // 数据库连接状态
+    const isDbConnected = computed(() => store.getters.isDbConnected)
+    const connectionError = computed(() => store.getters.getDbConnectionError)
+    
+    // 数据库设置验证规则
+    const dbRules = {
+      host: [
+        { required: true, message: '请输入连接地址', trigger: 'blur' }
+      ],
+      port: [
+        { required: true, message: '请输入端口号', trigger: 'blur' }
+      ],
+      username: [
+        { required: true, message: '请输入用户名', trigger: 'blur' }
+      ],
+      password: [
+        { required: true, message: '请输入密码', trigger: 'blur' }
+      ]
+    }
+    
+    // 保存数据库设置
     const saveSettings = () => {
-      // 保存数据库设置
-      localStorage.setItem('dbSettings', JSON.stringify(dbSettings))
-      ElMessage.success(locale.value === 'zh-CN' ? '设置已保存' : 'Settings saved')
+      dbFormRef.value.validate(async (valid) => {
+        if (valid) {
+          connecting.value = true
+          try {
+            const response = await store.dispatch('connectToDb', {
+              host: dbSettings.host,
+              port: dbSettings.port.toString(),
+              username: dbSettings.username,
+              password: dbSettings.password
+            })
+            
+            if (response.status === 'success') {
+              ElMessage.success(locale.value === 'zh-CN' ? '数据库连接成功' : 'Database connected successfully')
+            } else {
+              ElMessage.error(locale.value === 'zh-CN' ? '数据库连接失败' : 'Failed to connect to database')
+            }
+          } catch (error) {
+            ElMessage.error(locale.value === 'zh-CN' ? '数据库连接失败' : 'Failed to connect to database')
+          } finally {
+            connecting.value = false
+          }
+        }
+      })
     }
     
     // 重置设置
-    const resetSettings = () => {
+    const resetSettings = async () => {
       settings.theme = 'light'
       settings.language = 'zh-CN'
       
@@ -169,6 +223,19 @@ export default {
       dbSettings.password = ''
       dbSettings.timeout = 10
       
+      // 如果数据库已连接，则断开连接
+      if (isDbConnected.value) {
+        try {
+          disconnecting.value = true
+          await store.dispatch('closeDbConnection')
+          ElMessage.success(locale.value === 'zh-CN' ? '数据库连接已关闭' : 'Database connection closed')
+        } catch (error) {
+          ElMessage.error(locale.value === 'zh-CN' ? '关闭数据库连接失败' : 'Failed to close database connection')
+        } finally {
+          disconnecting.value = false
+        }
+      }
+      
       ElMessage.info(locale.value === 'zh-CN' ? '设置已重置' : 'Settings reset')
     }
     
@@ -179,8 +246,14 @@ export default {
       osInfo,
       handleThemeChange,
       handleLanguageChange,
-      saveSettings,
-      resetSettings
+      resetSettings,
+      dbFormRef,
+      dbRules,
+      isDbConnected,
+      connectionError,
+      connecting,
+      disconnecting,
+      saveSettings
     }
   }
 }
