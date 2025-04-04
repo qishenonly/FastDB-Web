@@ -141,23 +141,30 @@ export default {
             }
           }
           
-          emit('submit', { ...form })
+          // 准备提交的数据
+          const submitData = {
+            key: form.key,
+            value: form.type === 'number' ? numericValue.value.toString() : form.value,
+            type: form.type
+          }
+          
+          emit('submit', submitData)
         }
       })
     }
     
-    // 如果有初始数据，填充表单
-    onMounted(() => {
-      if (props.initialData) {
-        form.key = props.initialData.key
-        form.value = props.initialData.value
-        form.type = props.initialData.type
+    // 监听 initialData 的变化，当它改变时更新表单
+    watch(() => props.initialData, (newVal) => {
+      if (newVal) {
+        form.key = newVal.key
+        form.type = newVal.type
+        form.value = newVal.value
         
         if (form.type === 'number') {
           numericValue.value = parseFloat(form.value)
         }
       }
-    })
+    }, { immediate: true })
     
     return {
       formRef,

@@ -37,7 +37,10 @@ export default {
     confirmDelete: 'Confirm Delete',
     deleteWarning: 'This operation will permanently delete this item. Continue?',
     cancel: 'Cancel',
-    confirm: 'Confirm'
+    confirm: 'Confirm',
+    connectionRequired: 'Database Connection Required',
+    pleaseConnectFirst: 'Please configure and connect to the database in system settings first',
+    goToSettings: 'Go to Settings'
   },
   table: {
     key: 'Key',
@@ -65,13 +68,19 @@ export default {
     enterPassword: 'Enter password',
     timeout: 'Timeout (seconds)',
     saveSettings: 'Save Settings',
-    reset: 'Reset',
+    reset: 'Reset Connection',
     systemInfo: 'System Information',
     systemVersion: 'System Version',
     lastUpdate: 'Last Update',
     databaseEngine: 'Database Engine',
     apiVersion: 'API Version',
     browser: 'Browser',
-    operatingSystem: 'Operating System'
+    operatingSystem: 'Operating System',
+    connected: 'Connected',
+    disconnected: 'Disconnected',
+    connectionError: 'Connection Error',
+    closeConnection: 'Close Connection',
+    connectionClosed: 'Connection Closed',
+    failedToClose: 'Failed to close connection'
   }
 } 

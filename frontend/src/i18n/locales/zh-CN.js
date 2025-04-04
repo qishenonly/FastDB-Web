@@ -37,7 +37,10 @@ export default {
     confirmDelete: '确认删除',
     deleteWarning: '此操作将永久删除该键值对，是否继续？',
     cancel: '取消',
-    confirm: '确认'
+    confirm: '确认',
+    connectionRequired: '需要连接数据库',
+    pleaseConnectFirst: '请先在系统设置中配置并连接数据库',
+    goToSettings: '前往设置'
   },
   table: {
     key: '键名',
@@ -65,14 +68,20 @@ export default {
     enterPassword: '请输入密码',
     timeout: '超时设置(秒)',
     saveSettings: '保存设置',
-    reset: '重置',
+    reset: '重置连接',
     systemInfo: '系统信息',
     systemVersion: '系统版本',
     lastUpdate: '最后更新',
     databaseEngine: '数据库引擎',
     apiVersion: 'API版本',
     browser: '浏览器',
-    operatingSystem: '操作系统'
+    operatingSystem: '操作系统',
+    connected: '已连接',
+    disconnected: '未连接',
+    connectionError: '连接错误',
+    closeConnection: '关闭连接',
+    connectionClosed: '连接已关闭',
+    failedToClose: '关闭连接失败'
   },
   // 其他翻译...
 } 

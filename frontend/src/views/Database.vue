@@ -6,10 +6,7 @@
         <el-button type="primary" @click="showAddForm = true">
           <el-icon><el-icon-plus /></el-icon>{{ $t('database.addNew') }}
         </el-button>
-        <el-button type="success">
-          <el-icon><el-icon-upload /></el-icon>{{ $t('database.import') }}
-        </el-button>
-        <el-button type="info">
+        <el-button type="info" @click="exportData">
           <el-icon><el-icon-download /></el-icon>{{ $t('database.export') }}
         </el-button>
       </div>
@@ -143,7 +140,7 @@ export default {
     }
     
     const handleEdit = (item) => {
-      currentItem.value = item
+      currentItem.value = JSON.parse(JSON.stringify(item))  // 使用深拷贝确保完全独立的对象
       showEditForm.value = true
     }
     
@@ -155,25 +152,78 @@ export default {
     const confirmDelete = () => {
       if (itemToDelete.value) {
         store.dispatch('deleteKvItem', itemToDelete.value.key)
-        ElMessage.success('删除成功')
-        showDeleteConfirm.value = false
-        itemToDelete.value = null
+          .then(() => {
+            ElMessage.success('删除成功')
+            showDeleteConfirm.value = false
+            itemToDelete.value = null
+          })
+          .catch(() => {
+            ElMessage.error('删除失败')
+          })
       }
     }
     
     const handleAddSubmit = (formData) => {
       store.dispatch('addKvItem', formData)
-      ElMessage.success('添加成功')
-      showAddForm.value = false
+        .then(() => {
+          ElMessage.success('添加成功')
+          showAddForm.value = false
+        })
+        .catch(() => {
+          ElMessage.error('添加失败')
+        })
     }
     
     const handleEditSubmit = (formData) => {
       store.dispatch('updateKvItem', { key: currentItem.value.key, updatedItem: formData })
-      ElMessage.success('更新成功')
-      showEditForm.value = false
+        .then(() => {
+          ElMessage.success('更新成功')
+          showEditForm.value = false
+          currentItem.value = null
+        })
+        .catch(() => {
+          ElMessage.error('更新失败')
+        })
+    }
+    
+    const exportData = () => {
+      // 准备导出数据
+      const dataToExport = kvData.value.map(item => ({
+        key: item.key,
+        value: item.value,
+        type: item.type
+      }));
+      
+      // 转换为JSON字符串
+      const jsonStr = JSON.stringify(dataToExport, null, 2);
+      
+      // 创建Blob对象
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      
+      // 创建下载链接
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `fastdb-export-${new Date().toISOString().slice(0, 10)}.json`;
+      
+      // 触发下载
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      ElMessage.success('数据导出成功');
     }
     
     onMounted(() => {
+      // 获取所有键值对数据
+      store.dispatch('fetchAllItems').catch(error => {
+        ElMessage.error('获取数据失败')
+        console.error(error)
+      })
+      
       // 如果是从其他页面导航过来的，可能需要显示特定的表单
       if (props.showAddForm) {
         showAddForm.value = true
@@ -198,7 +248,8 @@ export default {
       handleDelete,
       confirmDelete,
       handleAddSubmit,
-      handleEditSubmit
+      handleEditSubmit,
+      exportData
     }
   }
 }

@@ -34,7 +34,7 @@
       </el-row>
     </div>
     
-    <div class="dashboard-charts">
+    <div class="dashboard-content">
       <el-row :gutter="20">
         <el-col :span="12">
           <el-card class="chart-card">
@@ -43,18 +43,18 @@
                 <span>{{ $t('dashboard.typeDistribution') }}</span>
               </div>
             </template>
-            <div class="chart-container" ref="typeChartRef"></div>
+            <div ref="typeChartRef" class="chart-container"></div>
           </el-card>
         </el-col>
         
         <el-col :span="12">
-          <el-card class="chart-card">
+          <el-card class="activity-card">
             <template #header>
               <div class="card-header">
                 <span>{{ $t('dashboard.recentActivity') }}</span>
               </div>
             </template>
-            <div class="activity-list">
+            <div v-if="recentActivities.length > 0" class="activity-list">
               <div v-for="(activity, index) in recentActivities" :key="index" class="activity-item">
                 <div class="activity-icon">
                   <el-icon :class="getActivityIconClass(activity.type)">
@@ -62,11 +62,15 @@
                   </el-icon>
                 </div>
                 <div class="activity-content">
-                  <div class="activity-title">{{ activity.title }}</div>
-                  <div class="activity-time">{{ activity.time }}</div>
+                  <div class="activity-title">
+                    {{ activity.type === 'add' ? '添加了键' : activity.type === 'update' ? '更新了键' : '删除了键' }}
+                    <span class="key-name">{{ activity.key }}</span>
+                  </div>
+                  <div class="activity-time">{{ formatTime(activity.timestamp) }}</div>
                 </div>
               </div>
             </div>
+            <el-empty v-else description="暂无活动记录"></el-empty>
           </el-card>
         </el-col>
       </el-row>
@@ -91,7 +95,7 @@
               <el-tag :type="getTypeTagType(row.type)">{{ row.type }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="updatedAt" label="更新时间" width="120" />
+          <el-table-column prop="updatedAt" label="更新时间" width="180" />
           <el-table-column label="操作" width="120">
             <template #default="{ row }">
               <el-button size="small" type="primary" @click="viewItem(row)">{{ $t('dashboard.view') }}</el-button>
@@ -121,6 +125,7 @@ import { PieChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import KeyValueViewer from '@/components/database/KeyValueViewer.vue'
+import { ElMessage } from 'element-plus'
 
 // 注册必要的组件
 echarts.use([TitleComponent, TooltipComponent, LegendComponent, PieChart, CanvasRenderer])
@@ -160,13 +165,7 @@ export default {
         .slice(0, 5)
     })
     
-    const recentActivities = [
-      { type: 'add', title: '添加了新键值对 user:1002', time: '10分钟前' },
-      { type: 'update', title: '更新了键值对 counter:visits', time: '30分钟前' },
-      { type: 'delete', title: '删除了键值对 temp:cache', time: '2小时前' },
-      { type: 'update', title: '更新了键值对 config:theme', time: '1天前' },
-      { type: 'add', title: '添加了新键值对 product:2005', time: '2天前' }
-    ]
+    const recentActivities = computed(() => store.getters.getRecentActivities)
     
     const getActivityIcon = (type) => {
       const iconMap = {
@@ -178,12 +177,13 @@ export default {
     }
     
     const getActivityIconClass = (type) => {
-      const classMap = {
-        'add': 'success',
-        'update': 'warning',
-        'delete': 'danger'
-      }
-      return classMap[type] || 'info'
+      return `activity-icon-${type}`
+    }
+    
+    const formatTime = (timestamp) => {
+      if (!timestamp) return ''
+      const date = new Date(timestamp)
+      return date.toLocaleString()
     }
     
     const getTypeTagType = (type) => {
@@ -247,7 +247,18 @@ export default {
     }
     
     onMounted(() => {
-      initTypeChart()
+      // 获取所有键值对数据
+      store.dispatch('fetchAllItems').then(() => {
+        initTypeChart()
+      }).catch(error => {
+        ElMessage.error('获取数据失败')
+        console.error(error)
+      })
+      
+      // 获取最近活动
+      store.dispatch('fetchRecentActivities').catch(error => {
+        console.error('获取最近活动失败:', error)
+      })
       
       window.addEventListener('resize', () => {
         typeChart && typeChart.resize()
@@ -268,6 +279,7 @@ export default {
       typeChartRef,
       getActivityIcon,
       getActivityIconClass,
+      formatTime,
       getTypeTagType,
       showViewer,
       currentItem,
@@ -304,7 +316,7 @@ export default {
   }
 }
 
-.dashboard-charts {
+.dashboard-content {
   margin-bottom: 30px;
 }
 
@@ -320,8 +332,12 @@ export default {
   }
 }
 
+.activity-card {
+  height: 100%;
+}
+
 .activity-list {
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
 }
 
@@ -339,7 +355,7 @@ export default {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #f0f2f5;
+  background-color: #f5f7fa;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -348,18 +364,18 @@ export default {
   .el-icon {
     font-size: 18px;
   }
-  
-  &-add {
-    color: $success-color;
-  }
-  
-  &-update {
-    color: $primary-color;
-  }
-  
-  &-delete {
-    color: $error-color;
-  }
+}
+
+.activity-icon-add {
+  color: $success-color;
+}
+
+.activity-icon-update {
+  color: $primary-color;
+}
+
+.activity-icon-delete {
+  color: $error-color;
 }
 
 .activity-content {
@@ -369,6 +385,12 @@ export default {
 .activity-title {
   font-size: 14px;
   margin-bottom: 4px;
+  
+  .key-name {
+    font-weight: 600;
+    color: $primary-color;
+    font-family: 'Courier New', monospace;
+  }
 }
 
 .activity-time {

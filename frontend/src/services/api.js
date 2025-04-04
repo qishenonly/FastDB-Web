@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:8010/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -30,13 +30,22 @@ api.interceptors.response.use(
     if (error.response) {
       // 服务器返回错误
       console.error('API错误:', error.response.data)
-    } else if (error.request) {
-      // 请求发送但没有收到响应
-      console.error('网络错误:', error.request)
-    } else {
-      // 请求设置时发生错误
-      console.error('请求错误:', error.message)
+      
+      // 保存完整的错误信息
+      const errorData = error.response.data || {};
+      const errorStatus = error.response.status;
+      const errorMessage = errorData.message || '未知错误';
+      
+      // 创建更详细的错误对象
+      const enhancedError = new Error(`${errorMessage} (${errorStatus})`);
+      enhancedError.status = errorStatus;
+      enhancedError.data = errorData;
+      enhancedError.originalError = error;
+      
+      return Promise.reject(enhancedError);
     }
+    
+    // 网络错误等
     return Promise.reject(error)
   }
 )
@@ -45,27 +54,27 @@ api.interceptors.response.use(
 export const kvApi = {
   // 获取所有键值对
   getAllItems() {
-    return api.get('/kv')
+    return api.get('/v1/kvs')
   },
   
   // 获取单个键值对
   getItem(key) {
-    return api.get(`/kv/${key}`)
+    return api.get(`/v1/kv/${key}`)
   },
   
   // 添加新键值对
   addItem(item) {
-    return api.post('/kv', item)
+    return api.put(`/v1/kv/${item.key}`, { value: item.value })
   },
   
   // 更新键值对
   updateItem(key, item) {
-    return api.put(`/kv/${key}`, item)
+    return api.put(`/v1/kv/${key}`, { value: item.value })
   },
   
   // 删除键值对
   deleteItem(key) {
-    return api.delete(`/kv/${key}`)
+    return api.delete(`/v1/kv/${key}`)
   },
   
   // 导入数据
@@ -76,6 +85,23 @@ export const kvApi = {
   // 导出数据
   exportData() {
     return api.get('/kv/export')
+  }
+}
+
+export const dbApi = {
+  // 检查数据库连接状态
+  checkConnection() {
+    return api.get('/v1/db/status')
+  },
+  
+  // 连接数据库
+  connect(connectionData) {
+    return api.post('/v1/db/connect', connectionData)
+  },
+  
+  // 关闭数据库连接
+  closeConnection() {
+    return api.post('/v1/db/close')
   }
 }
 
