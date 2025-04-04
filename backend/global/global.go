@@ -8,8 +8,8 @@ var (
 
 const (
 	// db
-	G_FastDB_Host     = "192.168.45.174"
+	G_FastDB_Host     = "localhost"
 	G_FastDB_Port     = "8999"
-	G_FastDB_UserName = "admin"
-	G_FastDB_Password = "admin123"
+	G_FastDB_UserName = "root"
+	G_FastDB_Password = "root"
 )

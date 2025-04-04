@@ -50,7 +50,15 @@
         </el-form-item>
         
         <el-form-item :label="$t('settings.password')" prop="password">
-          <el-input v-model="dbSettings.password" type="password" :placeholder="$t('settings.enterPassword')" show-password />
+          <el-input 
+            v-model="dbSettings.password" 
+            type="password" 
+            :placeholder="$t('settings.passwordPlaceholder')" 
+            show-password 
+          />
+          <div class="form-help-text" v-if="isDbConnected">
+            {{ $t('settings.passwordNotDisplayed') }}
+          </div>
         </el-form-item>
         
         <el-form-item :label="$t('settings.timeout')" prop="timeout">
@@ -93,167 +101,204 @@
 </template>
 
 <script>
-import { reactive, ref, onMounted, computed } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useStore } from 'vuex'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import Message from '@/utils/message'
 
 export default {
-  name: 'SettingsPage',
+  name: 'Settings',
   setup() {
     const store = useStore()
-    const { locale } = useI18n()
+    const { t, locale } = useI18n()
     const dbFormRef = ref(null)
     const connecting = ref(false)
     const disconnecting = ref(false)
+    const connectionError = ref('')
     
-    // 获取当前主题和语言
-    const settings = reactive({
-      theme: store.state.theme,
-      language: locale.value
-    })
-    
-    const dbSettings = reactive({
-      host: 'localhost',
-      port: 6379,
-      username: 'admin',
-      password: '',
-      timeout: 10
-    })
-    
-    const browserInfo = ref('')
-    const osInfo = ref('')
-    
-    onMounted(() => {
-      // 获取浏览器信息
-      browserInfo.value = navigator.userAgent
-      
-      // 获取操作系统信息
-      const userAgent = navigator.userAgent
-      if (userAgent.indexOf('Win') !== -1) osInfo.value = 'Windows'
-      else if (userAgent.indexOf('Mac') !== -1) osInfo.value = 'MacOS'
-      else if (userAgent.indexOf('Linux') !== -1) osInfo.value = 'Linux'
-      else if (userAgent.indexOf('Android') !== -1) osInfo.value = 'Android'
-      else if (userAgent.indexOf('iOS') !== -1) osInfo.value = 'iOS'
-      else osInfo.value = 'Unknown'
-    })
-    
-    // 处理主题变更
-    const handleThemeChange = (theme) => {
-      if (theme === 'auto') {
-        // 自动模式下根据系统偏好设置主题
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-        store.dispatch('setTheme', prefersDark ? 'dark' : 'light')
-        
-        // 监听系统主题变化
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-          store.dispatch('setTheme', e.matches ? 'dark' : 'light')
-        })
-      } else {
-        store.dispatch('setTheme', theme)
-      }
-    }
-    
-    // 处理语言变更
-    const handleLanguageChange = (lang) => {
-      locale.value = lang
-      localStorage.setItem('language', lang)
-      ElMessage.success(lang === 'zh-CN' ? '语言已更改' : 'Language changed')
-    }
+    // 系统信息
+    const browserInfo = navigator.userAgent
+    const osInfo = navigator.platform
     
     // 数据库连接状态
     const isDbConnected = computed(() => store.getters.isDbConnected)
-    const connectionError = computed(() => store.getters.getDbConnectionError)
     
-    // 数据库设置验证规则
+    // 设置
+    const settings = reactive({
+      theme: localStorage.getItem('theme') || 'light',
+      language: locale.value
+    })
+    
+    // 数据库设置
+    const dbSettings = reactive({
+      host: localStorage.getItem('db_host') || 'localhost',
+      port: parseInt(localStorage.getItem('db_port') || '3306'),
+      username: localStorage.getItem('db_username') || 'root',
+      password: '',
+      timeout: parseInt(localStorage.getItem('db_timeout') || '30')
+    })
+    
+    // 当前连接配置
+    const currentConnection = computed(() => {
+      return store.state.dbConnection && store.state.dbConnection.config
+    })
+    
+    // 主题切换
+    const handleThemeChange = (theme) => {
+      localStorage.setItem('theme', theme)
+      store.commit('SET_THEME', theme)
+      
+      // 应用主题
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark-mode')
+      } else {
+        document.documentElement.classList.remove('dark-mode')
+      }
+    }
+    
+    // 语言切换
+    const handleLanguageChange = (lang) => {
+      locale.value = lang
+      localStorage.setItem('locale', lang)
+    }
+    
+    // 表单验证规则
     const dbRules = {
       host: [
-        { required: true, message: '请输入连接地址', trigger: 'blur' }
+        { required: true, message: t('settings.hostRequired'), trigger: 'blur' }
       ],
       port: [
-        { required: true, message: '请输入端口号', trigger: 'blur' }
+        { required: true, message: t('settings.portRequired'), trigger: 'blur' }
       ],
       username: [
-        { required: true, message: '请输入用户名', trigger: 'blur' }
-      ],
-      password: [
-        { required: true, message: '请输入密码', trigger: 'blur' }
+        { required: true, message: t('settings.usernameRequired'), trigger: 'blur' }
       ]
     }
     
     // 保存数据库设置
-    const saveSettings = () => {
-      dbFormRef.value.validate(async (valid) => {
-        if (valid) {
-          connecting.value = true
-          try {
-            const response = await store.dispatch('connectToDb', {
-              host: dbSettings.host,
-              port: dbSettings.port.toString(),
-              username: dbSettings.username,
-              password: dbSettings.password
-            })
-            
-            if (response.status === 'success') {
-              ElMessage.success(locale.value === 'zh-CN' ? '数据库连接成功' : 'Database connected successfully')
-            } else {
-              ElMessage.error(locale.value === 'zh-CN' ? '数据库连接失败' : 'Failed to connect to database')
-            }
-          } catch (error) {
-            ElMessage.error(locale.value === 'zh-CN' ? '数据库连接失败' : 'Failed to connect to database')
-          } finally {
-            connecting.value = false
-          }
+    const saveSettings = async () => {
+      try {
+        // 验证表单
+        await dbFormRef.value.validate()
+        
+        connecting.value = true
+        connectionError.value = ''
+        
+        // 准备连接参数
+        const connectionParams = {
+          host: dbSettings.host,
+          port: dbSettings.port.toString(),
+          username: dbSettings.username,
+          timeout: dbSettings.timeout.toString()
         }
-      })
+        
+        // 如果用户输入了新密码，使用新密码
+        if (dbSettings.password) {
+          connectionParams.password = dbSettings.password
+        } 
+        // 如果用户没有输入新密码但已经连接，保留现有密码
+        else if (isDbConnected.value && currentConnection.value && currentConnection.value.password) {
+          connectionParams.password = currentConnection.value.password
+        }
+        // 否则使用空密码
+        else {
+          connectionParams.password = ''
+        }
+        
+        try {
+          // 连接数据库
+          const response = await store.dispatch('connectToDb', connectionParams)
+          
+          // 保存设置到localStorage
+          localStorage.setItem('db_host', dbSettings.host)
+          localStorage.setItem('db_port', dbSettings.port.toString())
+          localStorage.setItem('db_username', dbSettings.username)
+          localStorage.setItem('db_timeout', dbSettings.timeout.toString())
+          
+          ElMessage.success(t('settings.saveSuccess'))
+        } catch (error) {
+          console.error('连接数据库失败:', error)
+          connectionError.value = error.message || t('settings.connectionFailed')
+          ElMessage.error(t('settings.saveFailed'))
+        } finally {
+          connecting.value = false
+        }
+      } catch (formError) {
+        console.error('表单验证失败:', formError)
+        ElMessage.error(t('settings.formValidationFailed'))
+      }
     }
     
-    // 重置设置
+    // 重置连接
     const resetSettings = async () => {
-      settings.theme = 'light'
-      settings.language = 'zh-CN'
-      
-      // 应用重置的设置
-      handleThemeChange('light')
-      handleLanguageChange('zh-CN')
-      
-      dbSettings.host = 'localhost'
-      dbSettings.port = 6379
-      dbSettings.username = 'admin'
-      dbSettings.password = ''
-      dbSettings.timeout = 10
-      
-      // 如果数据库已连接，则断开连接
-      if (isDbConnected.value) {
-        try {
-          disconnecting.value = true
-          await store.dispatch('closeDbConnection')
-          ElMessage.success(locale.value === 'zh-CN' ? '数据库连接已关闭' : 'Database connection closed')
-        } catch (error) {
-          ElMessage.error(locale.value === 'zh-CN' ? '关闭数据库连接失败' : 'Failed to close database connection')
-        } finally {
-          disconnecting.value = false
-        }
+      try {
+        disconnecting.value = true
+        connectionError.value = ''
+        
+        // 调用关闭连接的API
+        await store.dispatch('closeDbConnection')
+        
+        // 清空密码字段
+        dbSettings.password = ''
+        
+        // 显示成功消息
+        ElMessage.success(t('settings.connectionClosed'))
+      } catch (error) {
+        console.error('重置连接失败:', error)
+        connectionError.value = error.message || t('settings.failedToClose')
+        ElMessage.error(t('settings.failedToClose'))
+      } finally {
+        disconnecting.value = false
       }
-      
-      ElMessage.info(locale.value === 'zh-CN' ? '设置已重置' : 'Settings reset')
     }
+    
+    // 初始化表单数据
+    const initFormData = () => {
+      // 如果已连接且有配置信息，使用当前连接的配置
+      if (isDbConnected.value && currentConnection.value) {
+        dbSettings.host = currentConnection.value.host || 'localhost'
+        dbSettings.port = currentConnection.value.port || 3306
+        dbSettings.username = currentConnection.value.username || 'root'
+        dbSettings.password = currentConnection.value.password || ''
+        dbSettings.timeout = currentConnection.value.timeout || 30
+      }
+    }
+    
+    // 组件挂载时检查连接状态
+    onMounted(async () => {
+      try {
+        await store.dispatch('checkDbConnection')
+        // 初始化表单数据
+        initFormData()
+      } catch (error) {
+        console.error('检查连接状态失败:', error)
+      }
+    })
+    
+    // 监听连接状态变化
+    watch(() => isDbConnected.value, (newVal) => {
+      if (newVal) {
+        // 连接状态改变时更新表单
+        initFormData()
+      }
+    })
     
     return {
       settings,
       dbSettings,
+      dbFormRef,
+      dbRules,
+      isDbConnected,
+      connecting,
+      disconnecting,
+      connectionError,
       browserInfo,
       osInfo,
       handleThemeChange,
       handleLanguageChange,
-      resetSettings,
-      dbFormRef,
-      dbRules,
-      isDbConnected,
-      connectionError,
-      connecting,
-      disconnecting,
-      saveSettings
+      saveSettings,
+      resetSettings
     }
   }
 }
@@ -275,5 +320,12 @@ export default {
 .form-actions {
   margin-top: 20px;
   text-align: right;
+}
+
+.form-help-text {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 5px;
+  line-height: 1.4;
 }
 </style> 
